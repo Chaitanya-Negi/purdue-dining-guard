@@ -19,19 +19,36 @@ This tool fetches live daily menu JSON data from the Purdue Dining API, processe
 - **Data Storage:** Local JSON files / cache
 - **Data Source:** Public Purdue Dining API (HTTP GET)
 
-## Setup
+## Setup & Usage
 
 Step-by-step instructions to get the project running locally:
 
 1. Clone the repository:
    ```bash
-   git clone [https://github.com/Chaitanya-Negi/purdue-dining-guard](https://github.com/Chaitanya-Negi/purdue-dining-guard)
+   git clone https://github.com/Chaitanya-Negi/purdue-dining-guard.git
    cd purdue-dining-guard
    ```
 
 2. Install dependencies:
-  ```bash
-    pip install requests
-```
-3. Run the tool
-   
+   ```bash
+   pip install requests
+   ```
+
+3. Run the tool:
+   ```bash
+   python src/dining_filter.py --hall ford --restriction hindu
+   ```
+
+## Roadmap (Future Plans)
+
+Features planned for future versions (pulled from the Eisenhower Matrix Schedule quadrant):
+
+- [ ] Add local user profile storage to save favorite dining halls and custom dietary restrictions.
+- [ ] Integrate macro-nutrients (calories and protein) tracking for fitness-oriented students.
+- [ ] Build a "what can I make with available ingredients" recipe suggestion engine.
+- [ ] Implement a community dish rating and review system.
+- [ ] Transition the backend logic into a mobile app (iOS/Android) for the App Store.
+
+## Author
+
+Chaitanya Negi — [GitHub Profile](https://github.com/Chaitanya-Negi)
