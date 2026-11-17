@@ -26,7 +26,8 @@ public class MenuFilter {
 
     public static FilterResult checkItem(
             MenuParser.Item item,
-            List<String> avoid) {
+            List<String> avoid,
+            boolean requireVegetarian) {
 
         if (item == null || avoid == null) {
             return FilterResult.UNKNOWN;
@@ -36,54 +37,61 @@ public class MenuFilter {
 
         for (String restriction : avoid) {
             if (restriction != null && !restriction.isBlank()) {
-                cleanedAvoid.add(restriction);
+                cleanedAvoid.add(normalize(restriction));
             }
         }
 
         avoid = cleanedAvoid;
 
-        if (avoid.isEmpty()) {
-            return FilterResult.SAFE;
-        }
-
-        if (item.Allergens == null || item.Allergens.isEmpty()) {
-            return FilterResult.UNKNOWN;
-        }
-
         boolean hasUnknownRestriction = false;
 
         for (String restriction : avoid) {
-            if (!SUPPORTED_ALLERGENS.contains(normalize(restriction))) {
+            if (!SUPPORTED_ALLERGENS.contains(restriction)) {
                 hasUnknownRestriction = true;
             }
         }
 
-        for (MenuParser.Allergen allergen : item.Allergens) {
+        // check allergen info
+        if (item.Allergens == null || item.Allergens.isEmpty()) {
 
-            if (allergen == null || allergen.Name == null) {
-                continue;
+            if (!avoid.isEmpty()) {
+                return FilterResult.UNKNOWN;
             }
 
-            String name = normalize(allergen.Name);
+        } else {
 
-            // These describe the diet and not the allergens in the food
-            if (name.equals("vegetarian") || name.equals("vegan")) {
-                continue;
-            }
+            for (MenuParser.Allergen allergen : item.Allergens) {
 
-            if (allergen.Value) {
+                if (allergen == null || allergen.Name == null) {
+                    continue;
+                }
 
-                for (String restriction : avoid) {
+                String name = normalize(allergen.Name);
 
-                    if (name.equals(normalize(restriction))) {
-                        // A confirmed match comes first even if other information is missing
-                        return FilterResult.UNSAFE;
-                    }
+                if (name.equals("vegetarian") || name.equals("vegan")) {
+                    continue;
+                }
+
+                if (allergen.Value && avoid.contains(name)) {
+                    // confirmed allergen match always ----> UNSAFE
+                    return FilterResult.UNSAFE;
                 }
             }
         }
 
-        // We cant verify restrictions that are not supported yet
+        // check vegetarian requirement
+        if (requireVegetarian) {
+
+            if (!item.NutritionReady || item.IsVegetarian == null) {
+                return FilterResult.UNKNOWN;
+            }
+
+            if (!item.IsVegetarian) {
+                return FilterResult.UNSAFE;
+            }
+        }
+
+        // unknown for anything that is not supported yet
         if (hasUnknownRestriction || !item.NutritionReady) {
             return FilterResult.UNKNOWN;
         }

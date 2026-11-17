@@ -24,7 +24,7 @@ public class MenuParser {
 
     static class Item {
         String Name;
-        boolean IsVegetarian;
+        Boolean IsVegetarian;
         boolean NutritionReady;
         List<Allergen> Allergens;
     }
