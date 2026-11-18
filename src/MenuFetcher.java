@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 import com.google.gson.JsonSyntaxException;
 
@@ -14,6 +15,11 @@ public class MenuFetcher {
 
     public static void main(String[] args) {
 
+        // dietary preferences
+        List<String> avoid = List.of("peanuts");
+        boolean requireVegetarian = false;
+
+        // today's date
         String today = LocalDate.now().format(
                 DateTimeFormatter.ofPattern("yyyy-MM-dd")
         );
@@ -50,59 +56,99 @@ public class MenuFetcher {
                     return;
                 }
 
-                System.out.println("Location: " + menu.Location);
+                System.out.println("\nLocation: " + menu.Location);
                 System.out.println("Date: " + menu.Date);
                 System.out.println("Published: " + menu.IsPublished);
 
-                if (menu.Meals != null && !menu.Meals.isEmpty()) {
+                if (menu.Meals == null || menu.Meals.isEmpty()) {
+                    System.out.println("No meal data available.");
+                    return;
+                }
 
-                    System.out.println("Number of meals: " + menu.Meals.size());
+                // track filtering results
+                int safeCount = 0;
+                int unsafeCount = 0;
+                int unknownCount = 0;
 
-                    MenuParser.Meal firstMeal = menu.Meals.get(0);
+                System.out.println("\n========== DINING MENU ==========");
 
-                    System.out.println("First meal: " + firstMeal.Name);
-                    System.out.println("Meal type: " + firstMeal.Type);
-                    System.out.println("Meal status: " + firstMeal.Status);
+                // checks every meal
+                for (MenuParser.Meal meal : menu.Meals) {
 
-                    if (firstMeal.Stations != null && !firstMeal.Stations.isEmpty()) {
-
-                        System.out.println("Number of stations: " + firstMeal.Stations.size());
-
-                        MenuParser.Station firstStation = firstMeal.Stations.get(0);
-
-                        System.out.println("First station: " + firstStation.Name);
-
-                        if (firstStation.Items != null && !firstStation.Items.isEmpty()) {
-
-                            MenuParser.Item firstItem = firstStation.Items.get(0);
-
-                            System.out.println("First food item: " + firstItem.Name);
-                            System.out.println("Vegetarian: " + firstItem.IsVegetarian);
-                            System.out.println("Nutrition ready: " + firstItem.NutritionReady);
-
-                            if (firstItem.Allergens != null && !firstItem.Allergens.isEmpty()) {
-
-                                System.out.println("Allergens:");
-
-                                for (MenuParser.Allergen allergen : firstItem.Allergens) {
-                                    System.out.println(allergen.Name + ": " + allergen.Value);
-                                }
-
-                            } else {
-                                System.out.println("No allergen data available.");
-                            }
-
-                        } else {
-                            System.out.println("No food items available.");
-                        }
-
-                    } else {
-                        System.out.println("No station data available.");
+                    if (meal == null) {
+                        continue;
                     }
 
-                } else {
-                    System.out.println("No meal data available.");
+                    System.out.println("\nMEAL: " + meal.Name);
+                    System.out.println("Type: " + meal.Type);
+                    System.out.println("Status: " + meal.Status);
+
+                    if (meal.Stations == null || meal.Stations.isEmpty()) {
+                        System.out.println("No station data available.");
+                        continue;
+                    }
+
+                    // check every station
+                    for (MenuParser.Station station : meal.Stations) {
+
+                        if (station == null) {
+                            continue;
+                        }
+
+                        System.out.println("\n  STATION: " + station.Name);
+
+                        if (station.Items == null || station.Items.isEmpty()) {
+                            System.out.println("  No food items available.");
+                            continue;
+                        }
+
+                        // check every food item
+                        for (MenuParser.Item item : station.Items) {
+
+                            String itemName;
+
+                            if (item == null) {
+                                itemName = "Unknown item";
+                            } else {
+                                itemName = item.Name;
+                            }
+
+                            // apply dietary restrictions
+                            MenuFilter.FilterResult result =
+                                    MenuFilter.checkItem(
+                                            item,
+                                            avoid,
+                                            requireVegetarian
+                                    );
+
+                            System.out.println("    " + itemName + " -> " + result);
+
+                            // update result counts
+                            switch (result) {
+                                case SAFE:
+                                    safeCount++;
+                                    break;
+
+                                case UNSAFE:
+                                    unsafeCount++;
+                                    break;
+
+                                case UNKNOWN:
+                                    unknownCount++;
+                                    break;
+                            }
+                        }
+                    }
                 }
+
+                // summary
+                System.out.println("\n========== FILTER SUMMARY ==========");
+                System.out.println("SAFE: " + safeCount);
+                System.out.println("UNSAFE: " + unsafeCount);
+                System.out.println("UNKNOWN: " + unknownCount);
+
+                System.out.println("Total items: "
+                        + (safeCount + unsafeCount + unknownCount));
 
             } catch (JsonSyntaxException e) {
                 System.out.println("Error: The API returned invalid JSON.");
