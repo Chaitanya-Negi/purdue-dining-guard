@@ -8,10 +8,30 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Objects;
 
 import com.google.gson.JsonSyntaxException;
 
 public class MenuFetcher {
+
+    static class MealResults {
+        String mealName;
+        List<StationResults> stations = new ArrayList<>();
+
+        MealResults(String mealName) {
+            this.mealName = mealName;
+        }
+    }
+
+    static class StationResults {
+        String stationName;
+        List<MenuParser.Item> items = new ArrayList<>();
+
+        StationResults(String stationName) {
+            this.stationName = stationName;
+        }
+    }
 
     public static void main(String[] args) {
 
@@ -65,53 +85,30 @@ public class MenuFetcher {
                     return;
                 }
 
-                // track filtering results
+                // store filtering results took way too much time than needed XD
+                List<MealResults> safeItems = new ArrayList<>();
+                List<MealResults> unknownItems = new ArrayList<>();
+
                 int safeCount = 0;
                 int unsafeCount = 0;
                 int unknownCount = 0;
 
-                System.out.println("\n========== DINING MENU ==========");
-
-                // checks every meal
+                // check every meal
                 for (MenuParser.Meal meal : menu.Meals) {
 
-                    if (meal == null) {
-                        continue;
-                    }
-
-                    System.out.println("\nMEAL: " + meal.Name);
-                    System.out.println("Type: " + meal.Type);
-                    System.out.println("Status: " + meal.Status);
-
-                    if (meal.Stations == null || meal.Stations.isEmpty()) {
-                        System.out.println("No station data available.");
+                    if (meal == null || meal.Stations == null) {
                         continue;
                     }
 
                     // check every station
                     for (MenuParser.Station station : meal.Stations) {
 
-                        if (station == null) {
-                            continue;
-                        }
-
-                        System.out.println("\n  STATION: " + station.Name);
-
-                        if (station.Items == null || station.Items.isEmpty()) {
-                            System.out.println("  No food items available.");
+                        if (station == null || station.Items == null) {
                             continue;
                         }
 
                         // check every food item
                         for (MenuParser.Item item : station.Items) {
-
-                            String itemName;
-
-                            if (item == null) {
-                                itemName = "Unknown item";
-                            } else {
-                                itemName = item.Name;
-                            }
 
                             // apply dietary restrictions
                             MenuFilter.FilterResult result =
@@ -121,12 +118,15 @@ public class MenuFetcher {
                                             requireVegetarian
                                     );
 
-                            System.out.println("    " + itemName + " -> " + result);
-
-                            // update result counts
                             switch (result) {
                                 case SAFE:
                                     safeCount++;
+                                    addItem(
+                                            safeItems,
+                                            meal.Name,
+                                            station.Name,
+                                            item
+                                    );
                                     break;
 
                                 case UNSAFE:
@@ -135,11 +135,25 @@ public class MenuFetcher {
 
                                 case UNKNOWN:
                                     unknownCount++;
+                                    addItem(
+                                            unknownItems,
+                                            meal.Name,
+                                            station.Name,
+                                            item
+                                    );
                                     break;
                             }
                         }
                     }
                 }
+
+                // print safe items
+                System.out.println("\n========== SAFE FOOD OPTIONS ==========");
+                printResults(safeItems);
+
+                // print unknown items
+                System.out.println("\n========== COULD NOT VERIFY ==========");
+                printResults(unknownItems);
 
                 // summary
                 System.out.println("\n========== FILTER SUMMARY ==========");
@@ -163,6 +177,93 @@ public class MenuFetcher {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             System.out.println("Error: The API request was interrupted.");
+        }
+    }
+
+    // add an item to its meal and station
+    private static void addItem(
+            List<MealResults> results,
+            String mealName,
+            String stationName,
+            MenuParser.Item item) {
+
+        MealResults mealResult = null;
+
+        for (MealResults meal : results) {
+            if (Objects.equals(meal.mealName, mealName)) {
+                mealResult = meal;
+                break;
+            }
+        }
+
+        if (mealResult == null) {
+            mealResult = new MealResults(mealName);
+            results.add(mealResult);
+        }
+
+        StationResults stationResult = null;
+
+        for (StationResults station : mealResult.stations) {
+            if (Objects.equals(station.stationName, stationName)) {
+                stationResult = station;
+                break;
+            }
+        }
+
+        if (stationResult == null) {
+            stationResult = new StationResults(stationName);
+            mealResult.stations.add(stationResult);
+        }
+
+        stationResult.items.add(item);
+    }
+
+    // print grouped results
+    private static void printResults(List<MealResults> results) {
+
+        if (results.isEmpty()) {
+            System.out.println("No items to display.");
+            return;
+        }
+
+        for (MealResults meal : results) {
+
+            String mealName = meal.mealName;
+
+            if (mealName == null || mealName.isBlank()) {
+                mealName = "Unknown meal";
+            }
+
+            System.out.println();
+            System.out.println("##################################");
+            System.out.println("  " + mealName.toUpperCase());
+            System.out.println("##################################");
+
+            for (StationResults station : meal.stations) {
+
+                String stationName = station.stationName;
+
+                if (stationName == null || stationName.isBlank()) {
+                    stationName = "Unknown station";
+                }
+
+                System.out.println();
+                System.out.println("  > " + stationName);
+                System.out.println("  " + "-".repeat(stationName.length() + 2));
+
+                for (MenuParser.Item item : station.items) {
+
+                    String itemName;
+
+                    if (item == null || item.Name == null) {
+                        itemName = "Unknown item";
+                    } else {
+                        itemName = item.Name;
+                    }
+
+                    System.out.println("      - " + itemName);
+                }
+            }
         }
     }
 }
