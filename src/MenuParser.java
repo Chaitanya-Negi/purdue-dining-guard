@@ -23,6 +23,7 @@ public class MenuParser {
     }
 
     static class Item {
+        String ID;
         String Name;
         Boolean IsVegetarian;
         boolean NutritionReady;

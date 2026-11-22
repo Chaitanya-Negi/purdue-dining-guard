@@ -1,4 +1,3 @@
-
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -135,10 +134,6 @@ public class MenuFetcher {
         String url = "https://api.hfs.purdue.edu/menus/v2/locations/"
                 + encodedHall + "/" + today;
 
-        System.out.println("Hall: " + options.hall);
-        System.out.println("Avoid: " + options.avoid);
-        System.out.println("Vegetarian: " + options.requireVegetarian);
-
         List<String> unsupportedRestrictions =
                 MenuFilter.getUnsupportedRestrictions(options.avoid);
 
@@ -163,7 +158,13 @@ public class MenuFetcher {
             HttpResponse<String> response =
                     client.send(request, HttpResponse.BodyHandlers.ofString());
 
-            System.out.println("Status Code: " + response.statusCode());
+            if (response.statusCode() == 500) {
+                System.out.println(
+                        "Error: Invalid dining hall name. "
+                        + "Please check the hall name and try again."
+                );
+                return;
+            }
 
             if (response.statusCode() != 200) {
                 System.out.println("Error: Unable to retrieve menu data.");
@@ -182,14 +183,13 @@ public class MenuFetcher {
 
                 System.out.println("\nLocation: " + menu.Location);
                 System.out.println("Date: " + menu.Date);
-                System.out.println("Published: " + menu.IsPublished);
 
                 if (menu.Meals == null || menu.Meals.isEmpty()) {
                     System.out.println("No meal data available.");
                     return;
                 }
 
-                // store filtering results before printinh
+                // store filtering results before printing
                 List<MealResults> safeItems = new ArrayList<>();
                 List<MealResults> unknownItems = new ArrayList<>();
 
