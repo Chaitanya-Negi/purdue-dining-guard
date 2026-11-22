@@ -1,3 +1,4 @@
+
 import java.util.List;
 import java.util.Set;
 import java.util.ArrayList;
@@ -24,6 +25,31 @@ public class MenuFilter {
             "wheat"
     );
 
+    public static List<String> getUnsupportedRestrictions(List<String> avoid) {
+
+        List<String> unsupported = new ArrayList<>();
+
+        if (avoid == null) {
+            return unsupported;
+        }
+
+        for (String restriction : avoid) {
+
+            if (restriction == null || restriction.isBlank()) {
+                continue;
+            }
+
+            String name = normalize(restriction);
+
+            if (!SUPPORTED_ALLERGENS.contains(name)
+                    && !unsupported.contains(name)) {
+                unsupported.add(name);
+            }
+        }
+
+        return unsupported;
+    }
+
     public static FilterResult checkItem(
             MenuParser.Item item,
             List<String> avoid,
@@ -43,13 +69,8 @@ public class MenuFilter {
 
         avoid = cleanedAvoid;
 
-        boolean hasUnknownRestriction = false;
-
-        for (String restriction : avoid) {
-            if (!SUPPORTED_ALLERGENS.contains(restriction)) {
-                hasUnknownRestriction = true;
-            }
-        }
+        boolean hasUnknownRestriction =
+                !getUnsupportedRestrictions(avoid).isEmpty();
 
         // check allergen info
         if (item.Allergens == null || item.Allergens.isEmpty()) {

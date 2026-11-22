@@ -1,3 +1,4 @@
+
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -78,6 +79,12 @@ public class MenuFetcher {
 
                     restriction = restriction.trim().toLowerCase();
 
+                    if (restriction.equals("vegetarian")) {
+                        throw new IllegalArgumentException(
+                                "Use --vegetarian instead of --avoid vegetarian"
+                        );
+                    }
+
                     if (!restriction.isEmpty()
                             && !options.avoid.contains(restriction)) {
                         options.avoid.add(restriction);
@@ -131,6 +138,17 @@ public class MenuFetcher {
         System.out.println("Hall: " + options.hall);
         System.out.println("Avoid: " + options.avoid);
         System.out.println("Vegetarian: " + options.requireVegetarian);
+
+        List<String> unsupportedRestrictions =
+                MenuFilter.getUnsupportedRestrictions(options.avoid);
+
+        if (!unsupportedRestrictions.isEmpty()) {
+            System.out.println(
+                    "Warning: Cannot check these restrictions: "
+                    + unsupportedRestrictions
+                    + ". \nSAFE will be empty; items will be listed under UNSAFE or COULD NOT VERIFY."
+            );
+        }
 
         HttpClient client = HttpClient.newHttpClient();
 
