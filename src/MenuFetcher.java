@@ -1,9 +1,11 @@
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -14,6 +16,12 @@ import java.util.Objects;
 import com.google.gson.JsonSyntaxException;
 
 public class MenuFetcher {
+
+    static class Options {
+        String hall = "Earhart";
+        List<String> avoid = new ArrayList<>();
+        boolean requireVegetarian = false;
+    }
 
     static class MealResults {
         String mealName;
@@ -33,18 +41,96 @@ public class MenuFetcher {
         }
     }
 
+    // read command line arguments
+    private static Options parseArguments(String[] args) {
+
+        Options options = new Options();
+
+        for (int i = 0; i < args.length; i++) {
+
+            if (args[i].equals("--hall")) {
+
+                if (i + 1 >= args.length || args[i + 1].startsWith("--")) {
+                    throw new IllegalArgumentException(
+                            "Missing value for --hall"
+                    );
+                }
+
+                options.hall = args[++i].trim();
+
+                if (options.hall.isBlank()) {
+                    throw new IllegalArgumentException(
+                            "Hall cannot be empty"
+                    );
+                }
+
+            } else if (args[i].equals("--avoid")) {
+
+                if (i + 1 >= args.length || args[i + 1].startsWith("--")) {
+                    throw new IllegalArgumentException(
+                            "Missing value for --avoid"
+                    );
+                }
+
+                String restrictions = args[++i];
+
+                for (String restriction : restrictions.split(",")) {
+
+                    restriction = restriction.trim().toLowerCase();
+
+                    if (!restriction.isEmpty()
+                            && !options.avoid.contains(restriction)) {
+                        options.avoid.add(restriction);
+                    }
+                }
+
+            } else if (args[i].equals("--vegetarian")) {
+
+                options.requireVegetarian = true;
+
+            } else {
+
+                throw new IllegalArgumentException(
+                        "Unknown argument: " + args[i]
+                );
+            }
+        }
+
+        return options;
+    }
+
     public static void main(String[] args) {
 
-        // dietary preferences
-        List<String> avoid = List.of("peanuts");
-        boolean requireVegetarian = false;
+        Options options;
+
+        try {
+            options = parseArguments(args);
+
+        } catch (IllegalArgumentException e) {
+            System.out.println("Error: " + e.getMessage());
+            System.out.println(
+                    "Usage: MenuFetcher --hall <name> "
+                    + "--avoid <allergen1,allergen2> --vegetarian"
+            );
+            return;
+        }
 
         // today's date
         String today = LocalDate.now().format(
                 DateTimeFormatter.ofPattern("yyyy-MM-dd")
         );
 
-        String url = "https://api.hfs.purdue.edu/menus/v2/locations/Earhart/" + today;
+        String encodedHall = URLEncoder.encode(
+                options.hall,
+                StandardCharsets.UTF_8
+        ).replace("+", "%20");
+
+        String url = "https://api.hfs.purdue.edu/menus/v2/locations/"
+                + encodedHall + "/" + today;
+
+        System.out.println("Hall: " + options.hall);
+        System.out.println("Avoid: " + options.avoid);
+        System.out.println("Vegetarian: " + options.requireVegetarian);
 
         HttpClient client = HttpClient.newHttpClient();
 
@@ -85,7 +171,7 @@ public class MenuFetcher {
                     return;
                 }
 
-                // store filtering results took way too much time than needed XD
+                // store filtering results before printinh
                 List<MealResults> safeItems = new ArrayList<>();
                 List<MealResults> unknownItems = new ArrayList<>();
 
@@ -114,8 +200,8 @@ public class MenuFetcher {
                             MenuFilter.FilterResult result =
                                     MenuFilter.checkItem(
                                             item,
-                                            avoid,
-                                            requireVegetarian
+                                            options.avoid,
+                                            options.requireVegetarian
                                     );
 
                             switch (result) {
