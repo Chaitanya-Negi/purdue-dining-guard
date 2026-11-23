@@ -21,6 +21,8 @@ public class MenuFetcher {
         String hall = "Earhart";
         List<String> avoid = new ArrayList<>();
         boolean requireVegetarian = false;
+        boolean dietaryOptionsProvided = false;
+        boolean saveProfile = false;
     }
 
     static class MealResults {
@@ -72,6 +74,8 @@ public class MenuFetcher {
                     );
                 }
 
+                options.dietaryOptionsProvided = true;
+
                 String restrictions = args[++i];
 
                 for (String restriction : restrictions.split(",")) {
@@ -92,7 +96,12 @@ public class MenuFetcher {
 
             } else if (args[i].equals("--vegetarian")) {
 
+                options.dietaryOptionsProvided = true;
                 options.requireVegetarian = true;
+
+            } else if (args[i].equals("--save")) {
+
+                options.saveProfile = true;
 
             } else {
 
@@ -116,9 +125,41 @@ public class MenuFetcher {
             System.out.println("Error: " + e.getMessage());
             System.out.println(
                     "Usage: MenuFetcher --hall <name> "
-                    + "--avoid <allergen1,allergen2> --vegetarian"
+                    + "--avoid <allergen1,allergen2> --vegetarian --save"
             );
             return;
+        }
+
+        // save the profile only if dietary options are provided
+        if (options.saveProfile) {
+
+            if (!options.dietaryOptionsProvided) {
+                System.out.println(
+                        "No dietary restrictions provided. Profile was not saved."
+                );
+
+            } else {
+                try {
+                    ProfileManager.saveProfile(
+                            options.avoid,
+                            options.requireVegetarian
+                    );
+
+                    System.out.println("Dietary profile saved.");
+
+                } catch (IOException e) {
+                    System.out.println(
+                            "Error: Unable to save dietary profile."
+                    );
+                }
+            }
+        }
+
+        // which settings used
+        if (options.dietaryOptionsProvided) {
+            System.out.println("Using command-line options.");
+        } else {
+            System.out.println("No restrictions set.");
         }
 
         // today's date
