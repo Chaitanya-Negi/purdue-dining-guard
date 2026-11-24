@@ -130,6 +130,13 @@ public class MenuFetcher {
             return;
         }
 
+        // load the saved profile if no dietary options were provided
+        boolean savedProfileLoaded = false;
+
+        if (!options.dietaryOptionsProvided) {
+            savedProfileLoaded = ProfileManager.loadProfile(options);
+        }
+
         // save the profile only if dietary options are provided
         if (options.saveProfile) {
 
@@ -158,8 +165,31 @@ public class MenuFetcher {
         // which settings used
         if (options.dietaryOptionsProvided) {
             System.out.println("Using command-line options.");
+
+        } else if (savedProfileLoaded) {
+
+            if (!options.avoid.isEmpty() && options.requireVegetarian) {
+                System.out.println(
+                        "Using saved profile: avoid "
+                        + options.avoid + ", vegetarian."
+                );
+
+            } else if (!options.avoid.isEmpty()) {
+                System.out.println(
+                        "Using saved profile: avoid " + options.avoid + "."
+                );
+
+            } else if (options.requireVegetarian) {
+                System.out.println("Using saved profile: vegetarian.");
+
+            } else {
+                System.out.println(
+                        "Using saved profile: no dietary restrictions."
+                );
+            }
+
         } else {
-            System.out.println("No restrictions set.");
+            System.out.println("No dietary restrictions provided.");
         }
 
         // today's date
